@@ -1,12 +1,14 @@
-package org.example.springbatch.writer;
+package org.example.springbatch.batch.writer;
 
-import org.example.springbatch.domain.ReportLine;
-import org.example.springbatch.domain.SaleRecord;
+import org.example.springbatch.batch.domain.ReportLine;
+import org.example.springbatch.batch.domain.SaleRecord;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -25,21 +27,22 @@ import org.springframework.stereotype.Component;
 @Component
 public class SalesReportWriter implements ItemWriter<SaleRecord>, StepExecutionListener {
 
+    private static final DateTimeFormatter FILE_SUFFIX_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
+
     private final JdbcTemplate jdbcTemplate;
     private final String outputFile;
     private Map<String, String> dealerNames = new HashMap<>();
     private final Map<String, ReportLine> report = new LinkedHashMap<>();
 
-    // Injecao de dependencias e caminho do arquivo de saida.
     public SalesReportWriter(JdbcTemplate jdbcTemplate,
                              @Value("${app.matriz-report-file}") String outputFile) {
         this.jdbcTemplate = jdbcTemplate;
         this.outputFile = outputFile;
     }
 
-    // Carrega o mapa de filiais antes do step iniciar.
     @Override
     public void beforeStep(StepExecution stepExecution) {
+        report.clear();
         dealerNames = jdbcTemplate.query("SELECT dealer_id, dealer_name FROM dealers", rs -> {
             Map<String, String> map = new HashMap<>();
             while (rs.next()) {
@@ -49,7 +52,6 @@ public class SalesReportWriter implements ItemWriter<SaleRecord>, StepExecutionL
         });
     }
 
-    // Agrega vendas por filial e modelo durante o processamento.
     @Override
     public void write(Chunk<? extends SaleRecord> items) {
         for (SaleRecord item : items) {
@@ -62,16 +64,14 @@ public class SalesReportWriter implements ItemWriter<SaleRecord>, StepExecutionL
         }
     }
 
-    // Grava o relatorio final ao termino do step.
     @Override
     public ExitStatus afterStep(StepExecution stepExecution) {
         writeReport();
         return ExitStatus.COMPLETED;
     }
 
-    // Escreve o CSV consolidado no destino.
     private void writeReport() {
-        Path path = Path.of(outputFile);
+        Path path = buildTimestampedOutputPath();
         try {
             Path parent = path.getParent();
             if (parent != null) {
@@ -89,7 +89,25 @@ public class SalesReportWriter implements ItemWriter<SaleRecord>, StepExecutionL
                 }
             }
         } catch (IOException e) {
-            throw new IllegalStateException("Failed to write report to " + outputFile, e);
+            throw new IllegalStateException("Failed to write report to " + path, e);
         }
+    }
+
+    private Path buildTimestampedOutputPath() {
+        Path configuredPath = Path.of(outputFile);
+        String timestampedFileName = addTimestampSuffix(configuredPath.getFileName().toString());
+        Path parent = configuredPath.getParent();
+        return parent == null ? Path.of(timestampedFileName) : parent.resolve(timestampedFileName);
+    }
+
+    private String addTimestampSuffix(String fileName) {
+        String timestamp = LocalDateTime.now().format(FILE_SUFFIX_FORMATTER);
+        int dotIndex = fileName.lastIndexOf('.');
+        if (dotIndex > 0) {
+            String baseName = fileName.substring(0, dotIndex);
+            String extension = fileName.substring(dotIndex);
+            return baseName + "_" + timestamp + extension;
+        }
+        return fileName + "_" + timestamp;
     }
 }

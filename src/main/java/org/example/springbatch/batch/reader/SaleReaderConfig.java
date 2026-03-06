@@ -1,6 +1,6 @@
-package org.example.springbatch.reader;
+package org.example.springbatch.batch.reader;
 
-import org.example.springbatch.domain.SaleRecord;
+import org.example.springbatch.batch.domain.SaleRecord;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Comparator;

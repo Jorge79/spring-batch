@@ -31,3 +31,12 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Dados sensíveis ###
+src/main/resources/application.properties
+
+### Dados gerados pelo Docker ###
+docker/data/
+
+### Arquivos gerados ###
+src/main/resources/matriz-report/

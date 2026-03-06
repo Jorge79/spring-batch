@@ -1,7 +1,9 @@
-package org.example.springbatch.config;
+package org.example.springbatch.batch.config;
 
-import org.example.springbatch.domain.SaleRecord;
-import org.example.springbatch.writer.SalesReportWriter;
+import org.example.springbatch.batch.decider.InputFilesDecider;
+import org.example.springbatch.batch.domain.SaleRecord;
+import org.example.springbatch.batch.listener.SalesReportSftpJobListener;
+import org.example.springbatch.batch.writer.SalesReportWriter;
 
 import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.job.builder.JobBuilder;
@@ -18,9 +20,17 @@ import org.springframework.transaction.PlatformTransactionManager;
 public class SalesReportJobConfig {
 
     @Bean
-    public Job salesReportJob(JobRepository jobRepository, Step salesReportStep) {
+    public Job salesReportJob(JobRepository jobRepository,
+                              Step salesReportStep,
+                              InputFilesDecider inputFilesDecider,
+                              SalesReportSftpJobListener salesReportSftpJobListener) {
         return new JobBuilder("salesReportJob", jobRepository)
-                .start(salesReportStep)
+                .listener(salesReportSftpJobListener)
+                .start(inputFilesDecider)
+                .on(InputFilesDecider.NO_INPUT).end(InputFilesDecider.NO_INPUT)
+                .from(inputFilesDecider)
+                .on("*").to(salesReportStep)
+                .end()
                 .build();
     }
 

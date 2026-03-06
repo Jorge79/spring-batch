@@ -1,6 +1,6 @@
-package org.example.springbatch.processor;
+package org.example.springbatch.batch.processor;
 
-import org.example.springbatch.domain.SaleRecord;
+import org.example.springbatch.batch.domain.SaleRecord;
 import org.springframework.batch.infrastructure.item.ItemProcessor;
 import org.springframework.stereotype.Component;
 

@@ -1,4 +1,4 @@
-package org.example.springbatch.domain;
+package org.example.springbatch.batch.domain;
 
 import java.math.BigDecimal;
 
